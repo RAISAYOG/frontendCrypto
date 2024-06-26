@@ -21,5 +21,9 @@ router.post("/userdetails", async (req, res) => {
     console.log(error);
   }
 });
+router.get("/hello", async (req, res) => {
+  res.send("hello world");
+
+});
 
 module.exports = router;
