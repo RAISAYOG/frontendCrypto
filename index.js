@@ -1,8 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
-const { header } = require("express-validator");
-const dashboardRouter = require("./Routes/Dashboard");
 const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
@@ -32,13 +30,11 @@ mongoose
 mongoose.set("strictQuery", true);
 
 // Routes for backend calls
-app.use("/dashboard", dashboardRouter);
+app.use("/dashboard", require("./Routes/Dashboard"));
 app.use("/dashboard", require("./Routes/Userdetails"));
 app.use("/dashboard", require("./Routes/ProfileUpdate"));
-
 app.use("/register", require("./Routes/CreatUser"));
 app.use("/register", require("./Routes/Signup"));
-
 app.use("/transactions", require("./Routes/Transactions"));
 app.use("/wallet", require("./Routes/Wallet"));
 
@@ -55,7 +51,7 @@ const predictionSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, required: true },
   walletAddress: { type: String, required: true },
 });
-const Prediction = mongoose.model("Prediction", predictionSchema);
+const Prediction = mongoose.models.Prediction || mongoose.model("Prediction", predictionSchema);
 
 const walletSchema = new mongoose.Schema({
   userId: {
@@ -65,7 +61,7 @@ const walletSchema = new mongoose.Schema({
   },
   balances: { type: Map, of: Number, default: { usd: 0 } },
 });
-const Wallet = mongoose.model("Wallet", walletSchema);
+const Wallet = mongoose.models.Wallet || mongoose.model("Wallet", walletSchema);
 
 const depositSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, required: true },
@@ -73,7 +69,7 @@ const depositSchema = new mongoose.Schema({
   proof: { type: String, required: true },
   approved: { type: Boolean, default: false },
 });
-const Deposit = mongoose.model("Deposit", depositSchema);
+const Deposit = mongoose.models.Deposit || mongoose.model("Deposit", depositSchema);
 
 const withdrawSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, required: true },
@@ -81,7 +77,7 @@ const withdrawSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   approved: { type: Boolean, default: false },
 });
-const Withdraw = mongoose.model("Withdraw", withdrawSchema);
+const Withdraw = mongoose.models.Withdraw || mongoose.model("Withdraw", withdrawSchema);
 
 const sendSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, required: true },
@@ -90,7 +86,7 @@ const sendSchema = new mongoose.Schema({
   address: { type: String, required: true },
   status: { type: String, default: "pending" },
 });
-const Send = mongoose.model("Send", sendSchema);
+const Send = mongoose.models.Send || mongoose.model("Send", sendSchema);
 
 const deliveryTimes = [
   { time: 60, interest: 0.1, minAmount: 20 },
@@ -123,8 +119,7 @@ app.get("/api/prices", async (req, res) => {
 
 // Place a prediction
 app.post("/api/predict", async (req, res) => {
-  const { symbol, direction, amount, deliveryTime, userId, walletAddress } =
-    req.body;
+  const { symbol, direction, amount, deliveryTime, userId, walletAddress } = req.body;
 
   const selectedTime = deliveryTimes.find((time) => time.time === deliveryTime);
 
@@ -180,10 +175,7 @@ app.post("/api/predict", async (req, res) => {
 
     setTimeout(async () => {
       try {
-        const result = await evaluatePrediction(
-          prediction._id,
-          selectedTime.interest
-        );
+        const result = await evaluatePrediction(prediction._id, selectedTime.interest);
         console.log("Evaluation result:", result);
       } catch (error) {
         console.error("Error evaluating prediction:", error);
@@ -201,8 +193,7 @@ const evaluatePrediction = async (predictionId, interestRate) => {
   const prediction = await Prediction.findById(predictionId);
   if (!prediction) throw new Error("Prediction not found");
 
-  const { symbol, direction, amount, currentPrice, fee, result, userId } =
-    prediction;
+  const { symbol, direction, amount, currentPrice, fee, result, userId } = prediction;
 
   // If admin has already set a result, use it
   if (result) {
